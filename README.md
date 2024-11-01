@@ -41,7 +41,7 @@ The whole claims are stored in the fiber context as "claims" by default.
 
 A test is included. To run the test you must:
 
-1. Setup a working Zitadel instance, either self-hosted of as SaaS. You will need the URL of this instance, as the **Provider URL**.
+1. Setup a working Zitadel instance, either self-hosted or SaaS. You will need the URL of this instance, as the **Provider URL**.
 1. Setup a Zitadel application in your instance. You will need the [**Client ID**](https://zitadel.com/docs/guides/manage/console/applications#application-settings) of this application.
 1. Create a human user and write down the user's **name**. You will need it for the assertion of the claims.
 1. Optionally, create an application which will be using the Zitadel provider for authentication. You can use [this](https://github.com/rvs1257/svelte-zitadel-pkce) Svelte application as the basis. You will need to login into a real or sample application in order to get the **```id_token```** field from the JSON returned by the ```/token``` endpoint.
