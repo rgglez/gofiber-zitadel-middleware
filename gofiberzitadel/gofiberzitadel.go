@@ -89,8 +89,10 @@ func New(config ...Config) fiber.Handler {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error: Can not obtain claims"})
 		}
 
+		// Store all the claims (by default)
     	c.Locals("claims", claims)
 	
+		// Store individual claims if needed
 		if cfg.StoreClaimsIndividually {
 			for key, value := range claims {
 				c.Locals(key, value)

@@ -10,8 +10,6 @@
 
 **gofiber-zitadel-middleware** is a [gofiber](https://gofiber.io/) [middleware](https://docs.gofiber.io/category/-middleware/) to be used along with the [Zitadel](https://zitadel.com/) (and perhaps other [OIDC](https://auth0.com/es/intro-to-iam/what-is-openid-connect-oidc) servers) security manager to verify the [JWT token](https://jwt.io/) provided by it in the corresponding flows.
 
-The claims are stored in the fiber context as "claims". 
-
 ## Installation
 
 ```bash
@@ -36,6 +34,7 @@ There are some configuration options available in the ```Config``` struct:
 * **```ProviderUrl```** a string which defines the URL of the Zitadel instance. Required.
 * **```ClientID```** a string which defines the ```client_id``` of the application to be used in the validation. Required.
 * **```StoreClaimsIndividually```** a boolean which defines if the claims should be stored as key:value pairs in the fiber context. Optional. Default: false
+The claims are stored in the fiber context as "claims" by default. 
 
 
 ## Testing
