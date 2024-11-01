@@ -33,8 +33,8 @@ There are some configuration options available in the ```Config``` struct:
 * **```Next```** defines a function to skip this middleware when returned true. Optional. Default: nil
 * **```ProviderUrl```** a string which defines the URL of the Zitadel instance. Required.
 * **```ClientID```** a string which defines the ```client_id``` of the application to be used in the validation. Required.
-* **```StoreClaimsIndividually```** a boolean which defines if the claims should be stored as key:value pairs in the fiber context. Optional. Default: false
-The claims are stored in the fiber context as "claims" by default. 
+* **```StoreClaimsIndividually```** a boolean which defines if the claims should be stored as key:value pairs in the fiber context. Optional. Default: false.
+The whole claims are stored in the fiber context as "claims" by default. 
 
 
 ## Testing
