@@ -35,9 +35,15 @@ There are some configuration options available in the ```Config``` struct:
 * **```ClientID```** a string which defines the ```client_id``` of the application to be used in the validation. Required.
 * **```StoreClaimsIndividually```** a boolean which defines if the claims should be stored as key:value pairs in the fiber context. Optional. Default: false.
 
+## Notes
+
+* The whole claims are stored in the fiber context as "claims" by default. 
+
 ## Testing
 
-A test is included. To run the test you must:
+A test is included. It also works as an example. 
+
+To run the test you must:
 
 1. Setup a working Zitadel instance, either self-hosted or SaaS. You will need the URL of this instance, as the **Provider URL**.
 1. Setup a Zitadel application in your instance. You will need the [**Client ID**](https://zitadel.com/docs/guides/manage/console/applications#application-settings) of this application.
@@ -68,10 +74,6 @@ Otherwise you would need to use the Zitadel API to get this token manually.
 
 * [github.com/coreos/go-oidc](https://github.com/coreos/go-oidc)
 * [github.com/gofiber/fiber/v2](https://github.com/gofiber/fiber/v2)
-
-## Notes
-
-* The whole claims are stored in the fiber context as "claims" by default. 
 
 ## License
 
