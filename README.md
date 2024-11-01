@@ -34,8 +34,6 @@ There are some configuration options available in the ```Config``` struct:
 * **```ProviderUrl```** a string which defines the URL of the Zitadel instance. Required.
 * **```ClientID```** a string which defines the ```client_id``` of the application to be used in the validation. Required.
 * **```StoreClaimsIndividually```** a boolean which defines if the claims should be stored as key:value pairs in the fiber context. Optional. Default: false.
-**Note: the whole claims are stored in the fiber context as "claims" by default. **
-
 
 ## Testing
 
@@ -70,6 +68,10 @@ Otherwise you would need to use the Zitadel API to get this token manually.
 
 * [github.com/coreos/go-oidc](https://github.com/coreos/go-oidc)
 * [github.com/gofiber/fiber/v2](https://github.com/gofiber/fiber/v2)
+
+## Notes
+
+* The whole claims are stored in the fiber context as "claims" by default. 
 
 ## License
 
