@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/rgglez/gofiber-zitadel-middleware/gofiberzitadel"
 )
 
 func main() {
