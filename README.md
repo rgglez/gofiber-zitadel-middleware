@@ -19,7 +19,7 @@ go get github.com/rgglez/gofiber-zitadel-middleware
 ## Usage
 
 ```go
-import gofiberzitadel
+import gofiberzitadel "github.com/rgglez/gofiber-zitadel-middleware"
 
 // Initialize Fiber app and middleware
 app := fiber.New()
@@ -41,9 +41,7 @@ There are some configuration options available in the ```Config``` struct:
 
 ## Testing
 
-A test is included. It also works as an example. 
-
-To run the test you must:
+A test is included. To run the test you must:
 
 1. Setup a working Zitadel instance, either self-hosted or SaaS. You will need the URL of this instance, as the **Provider URL**.
 1. Setup a Zitadel application in your instance. You will need the [**Client ID**](https://zitadel.com/docs/guides/manage/console/applications#application-settings) of this application.
