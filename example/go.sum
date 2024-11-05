@@ -25,6 +25,8 @@ github.com/rgglez/gofiber-zitadel-middleware v0.0.0-20241104222001-04adbac229b4 
 github.com/rgglez/gofiber-zitadel-middleware v0.0.0-20241104222001-04adbac229b4/go.mod h1:i4KOtf/+rjfMlPtbTM5lpGNJyJwa7CMwQIY4EaFB6gg=
 github.com/rgglez/gofiber-zitadel-middleware v0.0.0-20241105000558-b4dc986f289a h1:NlYB+5OTJBnwIGl/ZYHmIA0ZRv87HFjCqemno/I6aX0=
 github.com/rgglez/gofiber-zitadel-middleware v0.0.0-20241105000558-b4dc986f289a/go.mod h1:i4KOtf/+rjfMlPtbTM5lpGNJyJwa7CMwQIY4EaFB6gg=
+github.com/rgglez/gofiber-zitadel-middleware v0.0.0-20241105005927-87bf12590af3 h1:CqjjoP7byaf4qtkGEODZ7ru1H2m/LPoIhpHQWtpBKlA=
+github.com/rgglez/gofiber-zitadel-middleware v0.0.0-20241105005927-87bf12590af3/go.mod h1:i4KOtf/+rjfMlPtbTM5lpGNJyJwa7CMwQIY4EaFB6gg=
 github.com/rivo/uniseg v0.2.0 h1:S1pD9weZBuJdFmowNwbpi7BJ8TNftyUImj/0WQi72jY=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
