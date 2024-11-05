@@ -52,7 +52,7 @@ A test is included. To run the test you must:
 1. Create a human user and write down the user's **name**. You will need it for the assertion of the claims.
 1. Optionally, create an application which will be using the Zitadel provider for authentication. You can use [this](https://github.com/rvs1257/svelte-zitadel-pkce) Svelte application as the basis. You will need to login into a real or sample application in order to get the **```id_token```** field from the JSON returned by the ```/token``` endpoint.
 Otherwise you would need to use the Zitadel API to get this token manually.
-1. Set the test data in the enviroment. An example bash script is provided in ```tests/test_data.sh``` as a guide. You must fill in the values with your own data accordingly:
+1. Set the test data in the enviroment. An example bash script is provided in [```test_data.sh```](test_data.sh) as a guide. You must fill in the values with your own data accordingly:
 
     ```bash
     # The full URL including trailing / of your Zitadel instance
