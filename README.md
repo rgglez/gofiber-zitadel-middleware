@@ -19,7 +19,7 @@ go get github.com/rgglez/gofiber-zitadel-middleware
 ## Usage
 
 ```go
-import gofiberzitadel "github.com/rgglez/gofiber-zitadel-middleware"
+import gofiberzitadel "github.com/rgglez/gofiber-zitadel-middleware/gofiberzitadel"
 
 // Initialize Fiber app and middleware
 app := fiber.New()
