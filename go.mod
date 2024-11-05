@@ -1,4 +1,4 @@
-module github.com/rgglez/gofiber-zitadel-middleware
+module github.com/rgglez/gofiber-zitadel-middleware/v1
 
 go 1.23.2
 
