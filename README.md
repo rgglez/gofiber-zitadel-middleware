@@ -70,7 +70,7 @@ Otherwise you would need to use the Zitadel API to get this token manually.
     ```bash
     go test
     ```
-    inside the ```src/``` directory.
+    inside the [```gofiberzitadel/```](gofiberzitadel/) directory.
 
 ## Dependencies
 
