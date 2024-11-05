@@ -39,6 +39,10 @@ There are some configuration options available in the ```Config``` struct:
 
 * The whole claims are stored in the fiber context as "claims" by default. 
 
+## Example
+
+An example is provided in the [example/](example/) directory.
+
 ## Testing
 
 A test is included. To run the test you must:
