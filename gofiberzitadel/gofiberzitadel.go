@@ -49,6 +49,7 @@ type Config struct {
 	StoreClaimsIndividually bool
 }
 
+// Set the default configuration.
 var ConfigDefault = Config{
 	Next:                    nil,
 	ProviderUrl:             "",
@@ -56,6 +57,7 @@ var ConfigDefault = Config{
 	StoreClaimsIndividually: false,
 }
 
+// Middleware.
 func New(config ...Config) fiber.Handler {
 	cfg := ConfigDefault
 
