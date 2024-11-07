@@ -43,6 +43,29 @@ There are some configuration options available in the ```Config``` struct:
 
 An example is provided in the [example/](example/) directory.
 
+### Run it
+
+```bash
+cd example
+go run main.go
+```
+
+### Try it
+
+Then, if it started correctly, assuming that you filled the enviroment variables in ```test_data.sh``` . Or, just set the same variables explained in the Testing section.
+
+```bash
+# first step is optional
+source /path/to/test_data.sh
+```
+
+You will need [pytest](https://en.wikipedia.org/wiki/Pytest) tu run the test:
+
+```bash
+cd tests
+pytest
+```
+
 ## Testing
 
 A test is included. To run the test you must:
