@@ -7,7 +7,6 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/rgglez/gofiber-zitadel-middleware)](https://goreportcard.com/report/github.com/rgglez/gofiber-zitadel-middleware)
 [![GitHub release](https://img.shields.io/github/release/rgglez/gofiber-zitadel-middleware.svg)](https://github.com/rgglez/gofiber-zitadel-middleware/releases/)
 
-
 **gofiber-zitadel-middleware** is a [gofiber](https://gofiber.io/) [middleware](https://docs.gofiber.io/category/-middleware/) to be used along with the [Zitadel](https://zitadel.com/) (and perhaps other [OIDC](https://auth0.com/es/intro-to-iam/what-is-openid-connect-oidc) servers) security manager to verify the [JWT token](https://jwt.io/) provided by it in the corresponding flows.
 
 ## Installation
