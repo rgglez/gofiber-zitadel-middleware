@@ -103,6 +103,6 @@ Otherwise you would need to use the Zitadel API to get this token manually.
 
 ## License
 
-Copyright (c) 2024 Rodolfo González González
+Copyright (c) 2026 Rodolfo González González
 
 Licensed under the [Apache 2.0](LICENSE) license. Read the [LICENSE](LICENSE) file.
