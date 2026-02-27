@@ -98,12 +98,14 @@ func New(config ...Config) fiber.Handler {
 		// Verify the token using a OIDC IDTokenVerifier
 		token, err := verifier.Verify(context.Background(), strToken)
 		if err != nil {
+			log.Printf("can not verify the token: %v", err)
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Forbidden: Invalid token"})
 		}
 
 		// Obtain the claims
 		var claims map[string]interface{}
 		if err := token.Claims(&claims); err != nil {
+			log.Printf("can not get claims")
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error: Can not obtain claims"})
 		}
 
