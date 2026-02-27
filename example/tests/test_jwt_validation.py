@@ -3,24 +3,42 @@ import pytest
 import requests
 
 ENDPOINT = "http://localhost:3000"
+ZITADEL_ID_TOKEN = os.getenv("ZITADEL_ID_TOKEN")
+ZITADEL_ACCESS_TOKEN = os.getenv("ZITADEL_ACCESS_TOKEN")
+# Backward-compatible: if only ZITADEL_TOKEN is set, use it as access token
 ZITADEL_TOKEN = os.getenv("ZITADEL_TOKEN")
+if ZITADEL_ACCESS_TOKEN is None:
+    ZITADEL_ACCESS_TOKEN = ZITADEL_TOKEN
 
-# Ensure token is available, otherwise skip test
-@pytest.mark.skipif(ZITADEL_TOKEN is None, reason="ZITADEL_TOKEN environment variable is not set")
-def test_hello_world_endpoint():
-    # Define the URL of the endpoint
-    url = ENDPOINT
 
-    # Set up headers including the Authorization token
-    headers = {
-        "Authorization": f"Bearer {ZITADEL_TOKEN}"
-    }
+def _get(token: str) -> requests.Response:
+    return requests.get(ENDPOINT, headers={"Authorization": f"Bearer {token}"})
 
-    # Send the GET request
-    response = requests.get(url, headers=headers)
 
-    # Assert the status code
-    assert response.status_code == 200, f"Expected status code 200, but got {response.status_code}"
+@pytest.mark.skipif(ZITADEL_ID_TOKEN is None, reason="ZITADEL_ID_TOKEN environment variable is not set")
+def test_id_token():
+    response = _get(ZITADEL_ID_TOKEN)
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+    assert response.text == "Hello world", f"Expected 'Hello world', got {response.text}"
 
-    # Assert the response text
-    assert response.text == "Hello world", f"Expected response text 'Hello world', but got {response.text}"
+
+@pytest.mark.skipif(ZITADEL_ACCESS_TOKEN is None, reason="ZITADEL_ACCESS_TOKEN environment variable is not set")
+def test_access_token():
+    response = _get(ZITADEL_ACCESS_TOKEN)
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+    assert response.text == "Hello world", f"Expected 'Hello world', got {response.text}"
+
+
+def test_missing_token():
+    response = requests.get(ENDPOINT)
+    assert response.status_code == 401, f"Expected 401, got {response.status_code}"
+
+
+def test_invalid_token():
+    response = _get("invalid.token.value")
+    assert response.status_code == 401, f"Expected 401, got {response.status_code}"
+
+
+def test_malformed_header():
+    response = requests.get(ENDPOINT, headers={"Authorization": "NotBearer sometoken"})
+    assert response.status_code == 401, f"Expected 401, got {response.status_code}"

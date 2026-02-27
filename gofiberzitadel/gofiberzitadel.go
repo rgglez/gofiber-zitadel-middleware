@@ -1,30 +1,30 @@
 /*
-Copyright 2024 Rodolfo González González
+	Copyright 2026 Rodolfo González González
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+   	Licensed under the Apache License, Version 2.0 (the "License");
+   	you may not use this file except in compliance with the License.
+   	You may obtain a copy of the License at
 
        http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+   	Unless required by applicable law or agreed to in writing, software
+   	distributed under the License is distributed on an "AS IS" BASIS,
+   	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   	See the License for the specific language governing permissions and
+   	limitations under the License.
 */
 
 package gofiberzitadel
 
 import (
 	"context"
-	"fmt"
+	"encoding/base64"
+	"encoding/json"
 	"log"
 	"strings"
 
 	oidc "github.com/coreos/go-oidc"
 	fiber "github.com/gofiber/fiber/v2"
-	"github.com/kr/pretty"
 )
 
 type Config struct {
@@ -49,6 +49,15 @@ type Config struct {
 	//
 	// Optional. Default: false
 	StoreClaimsIndividually bool
+
+	// TokenType controls which verifier is used for incoming tokens.
+	// Valid values:
+	//   "auto"         - detect token type from payload claims (default)
+	//   "id_token"     - always use the ID token verifier (validates aud == ClientID)
+	//   "access_token" - always use the access token verifier (skips aud check)
+	//
+	// Optional. Default: "auto"
+	TokenType string
 }
 
 // Set the default configuration.
@@ -57,77 +66,137 @@ var ConfigDefault = Config{
 	ProviderUrl:             "",
 	ClientID:                "",
 	StoreClaimsIndividually: false,
+	TokenType:               "auto",
 }
 
-// Middleware.
+// detectTokenType inspects the unverified JWT payload to determine whether the
+// raw token is an access token or an ID token. It does NOT verify the signature.
+//
+// Detection heuristics (in order):
+//  1. "scope" claim present → access token
+//  2. "nonce" or "at_hash" claim present → ID token
+//  3. Default → "id_token"
+func detectTokenType(rawToken string) string {
+	parts := strings.Split(rawToken, ".")
+	if len(parts) != 3 {
+		return "id_token"
+	}
+
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return "id_token"
+	}
+
+	var claims map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return "id_token"
+	}
+
+	if _, ok := claims["scope"]; ok {
+		return "access_token"
+	}
+	if _, ok := claims["nonce"]; ok {
+		return "id_token"
+	}
+	if _, ok := claims["at_hash"]; ok {
+		return "id_token"
+	}
+
+	return "id_token"
+}
+
+// New returns a Fiber middleware handler that validates JWTs issued by a
+// Zitadel OIDC provider. It supports both ID tokens and access tokens,
+// selected via Config.TokenType ("auto", "id_token", or "access_token").
 func New(config ...Config) fiber.Handler {
 	cfg := ConfigDefault
 
-	var verifier *oidc.IDTokenVerifier
+	var idTokenVerifier *oidc.IDTokenVerifier
+	var accessTokenVerifier *oidc.IDTokenVerifier
 
 	if len(config) > 0 {
 		cfg = config[0]
 
-		// Obtain the provider
+		if cfg.TokenType == "" {
+			cfg.TokenType = "auto"
+		}
+
 		provider, err := oidc.NewProvider(context.Background(), cfg.ProviderUrl)
 		if err != nil {
-			log.Fatalf("can not obtain the OIDC provider: %v", err)
+			panic("gofiber-zitadel-middleware: cannot obtain the OIDC provider: " + err.Error())
 		}
-		// Obtain the verifier
-		verifier = provider.Verifier(&oidc.Config{ClientID: cfg.ClientID})
+
+		// ID token verifier: audience must contain ClientID.
+		idTokenVerifier = provider.Verifier(&oidc.Config{ClientID: cfg.ClientID})
+
+		// Access token verifier: skip audience check — access tokens carry the
+		// resource server identifier in aud, not the ClientID.
+		accessTokenVerifier = provider.Verifier(&oidc.Config{SkipClientIDCheck: true})
 	} else {
-		log.Fatalf("missconfigured middleware")
+		panic("gofiber-zitadel-middleware: misconfigured middleware")
 	}
-	if verifier == nil {
-		log.Fatalf("missconfigured middleware")
+
+	if idTokenVerifier == nil || accessTokenVerifier == nil {
+		panic("gofiber-zitadel-middleware: misconfigured middleware")
 	}
 
 	return func(c *fiber.Ctx) error {
-		// Should we pass?
 		if cfg.Next != nil && cfg.Next(c) {
 			return c.Next()
 		}
 
-		// Get the Authorization header
-		authHeader := c.GetReqHeaders()["Authorization"][0]
+		authValues, ok := c.GetReqHeaders()["Authorization"]
+		if !ok || len(authValues) == 0 || authValues[0] == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Authorization header missing",
+			})
+		}
+		authHeader := authValues[0]
 
-		// Does it start with Bearer?
 		if len(authHeader) < 7 || strings.ToUpper(authHeader[0:6]) != "BEARER" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"error": "Authorization header malformed",
 			})
 		}
 
-		// Get the token from the Authorization header
 		strToken := strings.TrimSpace(authHeader[7:])
-
-		fmt.Println("----------------------------------------------------")
-		pretty.Println(strToken)
-		fmt.Println("----------------------------------------------------")
-
-		// If the token is not provided, return a 401 status
 		if strToken == "" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Forbidden: No token provided"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Forbidden: No token provided",
+			})
 		}
 
-		// Verify the token using a OIDC IDTokenVerifier
+		effectiveType := cfg.TokenType
+		if effectiveType == "auto" {
+			effectiveType = detectTokenType(strToken)
+		}
+
+		var verifier *oidc.IDTokenVerifier
+		switch effectiveType {
+		case "access_token":
+			verifier = accessTokenVerifier
+		default:
+			verifier = idTokenVerifier
+		}
+
 		token, err := verifier.Verify(context.Background(), strToken)
 		if err != nil {
 			log.Printf("can not verify the token: %v", err)
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Forbidden: Invalid token"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Forbidden: Invalid token",
+			})
 		}
 
-		// Obtain the claims
 		var claims map[string]interface{}
 		if err := token.Claims(&claims); err != nil {
 			log.Printf("can not get claims")
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Error: Can not obtain claims"})
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Error: Can not obtain claims",
+			})
 		}
 
-		// Store all the claims (by default)
 		c.Locals("claims", claims)
 
-		// Store individual claims if needed
 		if cfg.StoreClaimsIndividually {
 			for key, value := range claims {
 				c.Locals(key, value)
