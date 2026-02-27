@@ -28,6 +28,7 @@ import (
 
 	oidc "github.com/coreos/go-oidc"
 	fiber "github.com/gofiber/fiber/v2"
+	"github.com/kr/pretty"
 )
 
 type Config struct {
@@ -184,6 +185,9 @@ func New(config ...Config) fiber.Handler {
 		}
 		if err := provider.Claims(&disc); err == nil {
 			introspectionEndpoint = disc.IntrospectionEndpoint
+			fmt.Println("--------------------------------------")
+			pretty.Println(introspectionEndpoint)
+			fmt.Println("--------------------------------------")
 		}
 	} else {
 		panic("gofiber-zitadel-middleware: misconfigured middleware")
