@@ -20,7 +20,10 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
+	"net/url"
 	"strings"
 
 	oidc "github.com/coreos/go-oidc"
@@ -44,6 +47,12 @@ type Config struct {
 	// Required
 	ClientID string
 
+	// ClientSecret is the client secret used for token introspection (RFC 7662).
+	// Required when handling opaque access tokens (non-JWT).
+	//
+	// Optional. Default: ""
+	ClientSecret string
+
 	// StoreClaimsIndividually defines if the claims should be stored
 	// as key:value pairs in the fiber context.
 	//
@@ -55,6 +64,7 @@ type Config struct {
 	//   "auto"         - detect token type from payload claims (default)
 	//   "id_token"     - always use the ID token verifier (validates aud == ClientID)
 	//   "access_token" - always use the access token verifier (skips aud check)
+	//   "opaque"       - always use token introspection (for non-JWT tokens)
 	//
 	// Optional. Default: "auto"
 	TokenType string
@@ -65,31 +75,32 @@ var ConfigDefault = Config{
 	Next:                    nil,
 	ProviderUrl:             "",
 	ClientID:                "",
+	ClientSecret:            "",
 	StoreClaimsIndividually: false,
 	TokenType:               "auto",
 }
 
-// detectTokenType inspects the unverified JWT payload to determine whether the
-// raw token is an access token or an ID token. It does NOT verify the signature.
+// detectTokenType inspects the unverified JWT payload to determine the token type.
+// For non-JWT (opaque) tokens it returns "opaque" immediately.
 //
-// Detection heuristics (in order):
-//  1. "scope" claim present → access token
-//  2. "nonce" or "at_hash" claim present → ID token
+// JWT detection heuristics (in order):
+//  1. "scope" claim present → "access_token"
+//  2. "nonce" or "at_hash" claim present → "id_token"
 //  3. Default → "id_token"
 func detectTokenType(rawToken string) string {
 	parts := strings.Split(rawToken, ".")
 	if len(parts) != 3 {
-		return "id_token"
+		return "opaque"
 	}
 
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
-		return "id_token"
+		return "opaque"
 	}
 
 	var claims map[string]json.RawMessage
 	if err := json.Unmarshal(payload, &claims); err != nil {
-		return "id_token"
+		return "opaque"
 	}
 
 	if _, ok := claims["scope"]; ok {
@@ -105,14 +116,48 @@ func detectTokenType(rawToken string) string {
 	return "id_token"
 }
 
-// New returns a Fiber middleware handler that validates JWTs issued by a
-// Zitadel OIDC provider. It supports both ID tokens and access tokens,
-// selected via Config.TokenType ("auto", "id_token", or "access_token").
+// introspectToken calls the RFC 7662 introspection endpoint with basic auth and
+// returns the active token's claims. Returns an error if the token is inactive
+// or the request fails.
+func introspectToken(introspectionURL, clientID, clientSecret, token string) (map[string]any, error) {
+	form := url.Values{}
+	form.Set("token", token)
+
+	req, err := http.NewRequest(http.MethodPost, introspectionURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("building introspection request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth(clientID, clientSecret)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("calling introspection endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var result map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decoding introspection response: %w", err)
+	}
+
+	active, _ := result["active"].(bool)
+	if !active {
+		return nil, fmt.Errorf("token is not active")
+	}
+
+	return result, nil
+}
+
+// New returns a Fiber middleware handler that validates tokens issued by a
+// Zitadel OIDC provider. It supports ID tokens, JWT access tokens, and opaque
+// access tokens (via token introspection), selected via Config.TokenType.
 func New(config ...Config) fiber.Handler {
 	cfg := ConfigDefault
 
 	var idTokenVerifier *oidc.IDTokenVerifier
 	var accessTokenVerifier *oidc.IDTokenVerifier
+	var introspectionEndpoint string
 
 	if len(config) > 0 {
 		cfg = config[0]
@@ -132,6 +177,14 @@ func New(config ...Config) fiber.Handler {
 		// Access token verifier: skip audience check — access tokens carry the
 		// resource server identifier in aud, not the ClientID.
 		accessTokenVerifier = provider.Verifier(&oidc.Config{SkipClientIDCheck: true})
+
+		// Fetch the introspection endpoint from the OIDC discovery document.
+		var disc struct {
+			IntrospectionEndpoint string `json:"introspection_endpoint"`
+		}
+		if err := provider.Claims(&disc); err == nil {
+			introspectionEndpoint = disc.IntrospectionEndpoint
+		}
 	} else {
 		panic("gofiber-zitadel-middleware: misconfigured middleware")
 	}
@@ -171,6 +224,35 @@ func New(config ...Config) fiber.Handler {
 			effectiveType = detectTokenType(strToken)
 		}
 
+		// Opaque token: use token introspection.
+		if effectiveType == "opaque" {
+			if cfg.ClientSecret == "" || introspectionEndpoint == "" {
+				log.Printf("opaque token received but introspection is not configured (missing ClientSecret or introspection endpoint)")
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+					"error": "Forbidden: Invalid token",
+				})
+			}
+
+			claims, err := introspectToken(introspectionEndpoint, cfg.ClientID, cfg.ClientSecret, strToken)
+			if err != nil {
+				log.Printf("token introspection failed: %v", err)
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+					"error": "Forbidden: Invalid token",
+				})
+			}
+
+			c.Locals("claims", claims)
+
+			if cfg.StoreClaimsIndividually {
+				for key, value := range claims {
+					c.Locals(key, value)
+				}
+			}
+
+			return c.Next()
+		}
+
+		// JWT token: use the appropriate verifier.
 		var verifier *oidc.IDTokenVerifier
 		switch effectiveType {
 		case "access_token":
@@ -187,7 +269,7 @@ func New(config ...Config) fiber.Handler {
 			})
 		}
 
-		var claims map[string]interface{}
+		var claims map[string]any
 		if err := token.Claims(&claims); err != nil {
 			log.Printf("can not get claims")
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
