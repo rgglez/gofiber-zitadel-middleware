@@ -30,9 +30,14 @@ import (
 func main() {
 	providerUrl := os.Getenv("ZITADEL_PROVIDER")
 	clientId := os.Getenv("ZITADEL_CLIENTID")
+	clientSecret := os.Getenv("ZITADEL_CLIENT_SECRET")
 
 	app := fiber.New()
-	app.Use(gofiberzitadel.New(gofiberzitadel.Config{ProviderUrl: providerUrl, ClientID: clientId}))
+	app.Use(gofiberzitadel.New(gofiberzitadel.Config{
+		ProviderUrl:  providerUrl,
+		ClientID:     clientId,
+		ClientSecret: clientSecret,
+	}))
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello world")

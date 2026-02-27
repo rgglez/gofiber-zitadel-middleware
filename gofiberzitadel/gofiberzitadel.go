@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"log"
 	"net/http"
 	"net/url"
@@ -28,7 +29,6 @@ import (
 
 	oidc "github.com/coreos/go-oidc"
 	fiber "github.com/gofiber/fiber/v2"
-	"github.com/kr/pretty"
 )
 
 type Config struct {
@@ -87,8 +87,9 @@ var ConfigDefault = Config{
 // JWT detection heuristics (in order):
 //  1. "scope" claim present → "access_token"
 //  2. "nonce" or "at_hash" claim present → "id_token"
-//  3. Default → "id_token"
-func detectTokenType(rawToken string) string {
+//  3. "aud" claim present but does not contain clientID → "access_token"
+//  4. Default → "id_token"
+func detectTokenType(rawToken, clientID string) string {
 	parts := strings.Split(rawToken, ".")
 	if len(parts) != 3 {
 		return "opaque"
@@ -114,7 +115,29 @@ func detectTokenType(rawToken string) string {
 		return "id_token"
 	}
 
+	// If aud is present but doesn't contain clientID, it's an access token
+	// whose audience is the resource server, not the application.
+	if audRaw, ok := claims["aud"]; ok && clientID != "" {
+		if !audContains(audRaw, clientID) {
+			return "access_token"
+		}
+	}
+
 	return "id_token"
+}
+
+// audContains checks whether a raw JSON "aud" claim (string or []string)
+// contains the given clientID.
+func audContains(audRaw json.RawMessage, clientID string) bool {
+	var single string
+	if json.Unmarshal(audRaw, &single) == nil {
+		return single == clientID
+	}
+	var multi []string
+	if json.Unmarshal(audRaw, &multi) == nil {
+		return slices.Contains(multi, clientID)
+	}
+	return false
 }
 
 // introspectToken calls the RFC 7662 introspection endpoint with basic auth and
@@ -185,9 +208,6 @@ func New(config ...Config) fiber.Handler {
 		}
 		if err := provider.Claims(&disc); err == nil {
 			introspectionEndpoint = disc.IntrospectionEndpoint
-			fmt.Println("--------------------------------------")
-			pretty.Println(introspectionEndpoint)
-			fmt.Println("--------------------------------------")
 		}
 	} else {
 		panic("gofiber-zitadel-middleware: misconfigured middleware")
@@ -225,7 +245,7 @@ func New(config ...Config) fiber.Handler {
 
 		effectiveType := cfg.TokenType
 		if effectiveType == "auto" {
-			effectiveType = detectTokenType(strToken)
+			effectiveType = detectTokenType(strToken, cfg.ClientID)
 		}
 
 		// Opaque token: use token introspection.

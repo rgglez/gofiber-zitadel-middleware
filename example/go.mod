@@ -4,6 +4,8 @@ go 1.23.2
 
 require github.com/gofiber/fiber/v2 v2.52.5
 
+replace github.com/rgglez/gofiber-zitadel-middleware => ../
+
 require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/coreos/go-oidc v2.2.1+incompatible // indirect
