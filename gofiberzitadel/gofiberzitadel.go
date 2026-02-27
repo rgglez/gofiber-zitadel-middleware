@@ -18,11 +18,13 @@ package gofiberzitadel
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 
 	oidc "github.com/coreos/go-oidc"
 	fiber "github.com/gofiber/fiber/v2"
+	"github.com/kr/pretty"
 )
 
 type Config struct {
@@ -86,9 +88,22 @@ func New(config ...Config) fiber.Handler {
 			return c.Next()
 		}
 
+		// Get the Authorization header
+		authHeader := c.GetReqHeaders()["Authorization"][0]
+
+		// Does it start with Bearer?
+		if len(authHeader) < 7 || strings.ToUpper(authHeader[0:6]) != "BEARER" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Authorization header malformed",
+			})
+		}
+
 		// Get the token from the Authorization header
-		bearer := c.Get("Authorization")
-		strToken := strings.TrimPrefix(bearer, "Bearer ")
+		strToken := strings.TrimSpace(authHeader[7:])
+
+		fmt.Println("----------------------------------------------------")
+		pretty.Println(strToken)
+		fmt.Println("----------------------------------------------------")
 
 		// If the token is not provided, return a 401 status
 		if strToken == "" {
